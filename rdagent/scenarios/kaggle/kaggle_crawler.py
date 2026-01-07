@@ -108,6 +108,7 @@ def crawl_descriptions(
 
 
 def download_data(competition: str, settings: ExtendedBaseSettings, enable_create_debug_data: bool = True) -> None:
+    return
     local_path = settings.local_data_path
     if settings.if_using_mle_data:
         zipfile_path = f"{local_path}/zip_files"
