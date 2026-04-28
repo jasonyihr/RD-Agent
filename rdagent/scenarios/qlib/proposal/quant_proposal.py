@@ -4,6 +4,7 @@ from typing import Tuple
 
 from rdagent.app.qlib_rd_loop.conf import QUANT_PROP_SETTING
 from rdagent.components.proposal import FactorAndModelHypothesisGen
+from rdagent.core.direction import Direction
 from rdagent.core.proposal import Hypothesis, Scenario, Trace
 from rdagent.oai.llm_utils import APIBackend
 from rdagent.scenarios.qlib.proposal.bandit import (
@@ -30,9 +31,11 @@ class QlibQuantHypothesis(Hypothesis):
         concise_justification: str,
         concise_knowledge: str,
         action: str,
+        direction: Direction | None = None,
     ) -> None:
         super().__init__(
-            hypothesis, reason, concise_reason, concise_observation, concise_justification, concise_knowledge
+            hypothesis, reason, concise_reason, concise_observation, concise_justification, concise_knowledge,
+            direction=direction,
         )
         self.action = action
 

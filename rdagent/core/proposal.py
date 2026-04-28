@@ -37,6 +37,7 @@ class Hypothesis:
         concise_observation: str,
         concise_justification: str,
         concise_knowledge: str,
+        direction: Direction | None = None,
     ) -> None:
         self.hypothesis: str = hypothesis
         self.reason: str = reason
@@ -44,6 +45,7 @@ class Hypothesis:
         self.concise_observation: str = concise_observation
         self.concise_justification: str = concise_justification
         self.concise_knowledge: str = concise_knowledge
+        self.direction: Direction | None = direction
 
     def __str__(self) -> str:
         return f"""Hypothesis: {self.hypothesis}
