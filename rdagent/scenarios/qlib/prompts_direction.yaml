@@ -1,0 +1,14 @@
+direction_guidance: |-
+  {% if directions %}
+  [Direction Exploration Status]
+  Explored directions (ranked by potential):
+  {% for d in directions %}
+    - {{ d.name }} (attempts={{ d.attempts }}, best={{ "%.4f"|format(d.best_score) }}, UCB={{ "%.4f"|format(d.ucb) }}) [{{ d.status }}]
+  {% endfor %}
+  {% if recommendations %}
+  Recommendations:
+  {% for rec in recommendations %}
+    - {{ rec }}
+  {% endfor %}
+  {% endif %}
+  {% endif %}

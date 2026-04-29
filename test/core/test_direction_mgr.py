@@ -325,3 +325,92 @@ class TestGetGuidance:
         underexplored = mgr.tracker.get_underexplored_directions(threshold=2)
         assert any(d.name == "volatility" for d in underexplored)
         assert not any(d.name == "momentum" for d in underexplored)
+
+
+# ---------------------------------------------------------------------------
+# Test: get_guidance_context
+# ---------------------------------------------------------------------------
+
+
+class TestGetGuidanceContext:
+    def test_empty_returns_empty_dict(self):
+        mgr = DirectionManager()
+        ctx = mgr.get_guidance_context()
+        assert ctx == {}
+
+    def test_returns_structured_data(self):
+        mgr = DirectionManager(
+            classifier=lambda text, existing: (
+                "momentum" if "momentum" in text else "volatility",
+                "Description",
+            ),
+            score_fn=lambda exp, fb: 0.5,
+        )
+
+        exp1 = _make_mock_experiment("momentum hypothesis")
+        exp2 = _make_mock_experiment("volatility hypothesis")
+        trace = _make_mock_trace([(exp1, _make_feedback(True)), (exp2, _make_feedback(True))])
+
+        mgr.update_from_trace(trace)
+        ctx = mgr.get_guidance_context()
+
+        assert "directions" in ctx
+        assert "recommendations" in ctx
+        assert len(ctx["directions"]) == 2
+        assert any(d["name"] == "momentum" for d in ctx["directions"])
+        assert any(d["name"] == "volatility" for d in ctx["directions"])
+
+    def test_direction_entry_fields(self):
+        mgr = DirectionManager(
+            classifier=lambda text, existing: ("momentum", "Momentum"),
+            score_fn=lambda exp, fb: 0.5,
+        )
+
+        trace = _make_mock_trace([(_make_mock_experiment("momentum 1"), _make_feedback(True))])
+        mgr.update_from_trace(trace)
+        ctx = mgr.get_guidance_context()
+
+        d = ctx["directions"][0]
+        assert d["name"] == "momentum"
+        assert d["attempts"] == 1
+        assert d["best_score"] == 0.5
+        assert d["status"] == "ACTIVE"
+        assert "ucb" in d
+
+    def test_recommendations_include_saturated(self):
+        scores = [0.5, 0.3, 0.3, 0.3]
+        mgr = DirectionManager(
+            classifier=lambda text, existing: ("momentum", "Momentum"),
+            score_fn=lambda exp, fb: scores.pop(0),
+        )
+
+        trace = _make_mock_trace([])
+        for i in range(4):
+            trace.hist.append((_make_mock_experiment(f"momentum {i}"), _make_feedback(True)))
+
+        mgr.update_from_trace(trace)
+        ctx = mgr.get_guidance_context()
+
+        assert len(ctx["recommendations"]) > 0
+        assert any("saturat" in r.lower() for r in ctx["recommendations"])
+
+    def test_recommendations_include_underexplored(self):
+        mgr = DirectionManager(
+            classifier=lambda text, existing: (
+                "momentum" if "momentum" in text else "volatility",
+                "Description",
+            ),
+            score_fn=lambda exp, fb: 0.5,
+        )
+
+        trace = _make_mock_trace([
+            (_make_mock_experiment("momentum 1"), _make_feedback(True)),
+            (_make_mock_experiment("momentum 2"), _make_feedback(True)),
+            (_make_mock_experiment("momentum 3"), _make_feedback(True)),
+            (_make_mock_experiment("volatility 1"), _make_feedback(True)),
+        ])
+
+        mgr.update_from_trace(trace)
+        ctx = mgr.get_guidance_context()
+
+        assert any("underexplored" in r.lower() for r in ctx["recommendations"])

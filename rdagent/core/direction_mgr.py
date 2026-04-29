@@ -119,26 +119,54 @@ class DirectionManager:
         Returns a human-readable summary of direction exploration status
         with recommendations, or an empty string if no directions exist.
         """
-        if not self.tracker.directions:
+        ctx = self.get_guidance_context()
+        if not ctx:
             return ""
+
+        lines = ["[Direction Exploration Status]"]
+        lines.append("Explored directions (ranked by potential):")
+        for d in ctx["directions"]:
+            lines.append(
+                f"  - {d['name']} (attempts={d['attempts']}, "
+                f"best={d['best_score']:.4f}, UCB={d['ucb']:.4f}) [{d['status']}]"
+            )
+
+        if ctx["recommendations"]:
+            lines.append("Recommendations:")
+            for r in ctx["recommendations"]:
+                lines.append(f"  - {r}")
+
+        return "\n".join(lines)
+
+    def get_guidance_context(self) -> dict:
+        """Return structured direction data for template rendering.
+
+        Returns
+        -------
+        dict
+            A dict with ``directions`` (list of direction info dicts) and
+            ``recommendations`` (list of recommendation strings), or an
+            empty dict if no directions have been explored.
+        """
+        if not self.tracker.directions:
+            return {}
 
         ranking = self.tracker.get_ucb_ranking()
         saturated = self.tracker.get_saturated_directions()
         underexplored = self.tracker.get_underexplored_directions()
 
-        lines = ["[Direction Exploration Status]"]
-
-        # Ranking
-        lines.append("Explored directions (ranked by potential):")
+        directions = []
         for d, ucb in ranking:
             ds = self.tracker.directions[d.name]
-            status = "SATURATED" if ds.is_saturated else "ACTIVE"
-            lines.append(
-                f"  - {d.name} (attempts={ds.attempt_count}, "
-                f"best={ds.best_score:.4f}, UCB={ucb:.4f}) [{status}]"
-            )
+            directions.append({
+                "name": d.name,
+                "description": d.description,
+                "attempts": ds.attempt_count,
+                "best_score": ds.best_score,
+                "ucb": ucb,
+                "status": "SATURATED" if ds.is_saturated else "ACTIVE",
+            })
 
-        # Recommendations
         recommendations = []
         if saturated:
             names = [d.name for d in saturated]
@@ -153,9 +181,4 @@ class DirectionManager:
                 f"Consider trying these directions."
             )
 
-        if recommendations:
-            lines.append("Recommendations:")
-            for r in recommendations:
-                lines.append(f"  - {r}")
-
-        return "\n".join(lines)
+        return {"directions": directions, "recommendations": recommendations}

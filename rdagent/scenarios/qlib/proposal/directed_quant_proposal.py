@@ -22,6 +22,7 @@ from rdagent.scenarios.qlib.proposal.bandit import (
     extract_metrics_from_experiment,
 )
 from rdagent.scenarios.qlib.proposal.quant_proposal import QlibQuantHypothesisGen
+from rdagent.utils.agent.tpl import T
 
 
 # ---------------------------------------------------------------------------
@@ -166,9 +167,11 @@ class DirectedQlibQuantHypothesisGen(QlibQuantHypothesisGen):
         # Update direction tracking from the full trace history
         self.direction_mgr.update_from_trace(trace)
 
-        # Generate guidance text
-        guidance = self.direction_mgr.get_guidance()
-        if guidance:
-            context_dict["RAG"] = context_dict.get("RAG", "") + "\n\n" + guidance
+        # Render guidance using template
+        ctx = self.direction_mgr.get_guidance_context()
+        if ctx:
+            guidance = T("scenarios.qlib.prompts_direction:direction_guidance").r(**ctx)
+            if guidance:
+                context_dict["RAG"] = context_dict.get("RAG", "") + "\n\n" + guidance
 
         return context_dict, json_flag
