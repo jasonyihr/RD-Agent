@@ -313,12 +313,15 @@ class TestGetGuidance:
             score_fn=lambda exp, fb: 0.5,
         )
 
-        # Only explore momentum, not volatility
+        # Explore momentum heavily, volatility only once
         trace = _make_mock_trace([
             (_make_mock_experiment("momentum 1"), _make_feedback(True)),
             (_make_mock_experiment("momentum 2"), _make_feedback(True)),
+            (_make_mock_experiment("momentum 3"), _make_feedback(True)),
+            (_make_mock_experiment("volatility 1"), _make_feedback(True)),
         ])
 
         mgr.update_from_trace(trace)
         underexplored = mgr.tracker.get_underexplored_directions(threshold=2)
         assert any(d.name == "volatility" for d in underexplored)
+        assert not any(d.name == "momentum" for d in underexplored)
